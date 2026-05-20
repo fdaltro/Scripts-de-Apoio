@@ -40,3 +40,16 @@ while true; do
   curl -s -o /dev/null -w "Validate: %{http_code}\n" -X POST "$URL/validate" -H "Authorization: Bearer chave-fake" -H "Content-Type: application/json"
   sleep 0.5
 done
+
+
+#Script fr health para gerar traces dos serviços
+
+while true; do
+  echo "--- Enviando telemetria $(date +%H:%M:%S) ---"
+  for port in 8001 8002 8003 8004 8005; do
+    # Faz o curl e extrai apenas o código HTTP
+    status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:$port/health || echo "OFF")
+    echo "Porta $port: $status"
+  done
+  sleep 0.1 # Espera 5 segundos antes da próxima rodada
+done
