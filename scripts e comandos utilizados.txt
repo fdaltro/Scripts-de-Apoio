@@ -1,0 +1,42 @@
+# Segem abaixo os scripts e comandos utilizados na apresentação
+
+# Envio de mensagens para Fila
+
+QUEUE_URL="https://sqs.us-east-1.amazonaws.com/504491092699/togglemaster-queue"
+
+while true; do
+  aws sqs send-message --queue-url "$QUEUE_URL" \
+    --message-body "{
+      \"user_id\": \"aws-shell-user\",
+      \"flag_name\": \"enable-new-dashboard\",
+      \"result\": true,
+      \"timestamp\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"
+    }" > /dev/null && echo "📥 Mensagem enviada às $(date +%H:%M:%S)"
+  sleep 1
+done
+
+
+
+
+# Mata qualquer processo antigo
+pkill -f "port-forward"
+
+# Abre os 5 túneis em background de novo
+kubectl port-forward svc/auth-service 8001:8001 -n togglemaster &>/dev/null &
+kubectl port-forward svc/flag-service 8002:8002 -n togglemaster &>/dev/null &
+kubectl port-forward svc/targeting-service 8003:8003 -n togglemaster &>/dev/null &
+kubectl port-forward svc/evaluation-service 8004:8004 -n togglemaster &>/dev/null &
+kubectl port-forward svc/analytics-service 8005:8005 -n togglemaster &>/dev/null &
+
+
+
+
+# Script de erro 400 para disparar o pagerduty
+URL="http://localhost:8001"
+
+echo "Iniciando tráfego... Vamos ver o que o servidor responde:"
+while true; do
+  curl -s -o /dev/null -w "Health: %{http_code} | " -X GET "$URL/health"
+  curl -s -o /dev/null -w "Validate: %{http_code}\n" -X POST "$URL/validate" -H "Authorization: Bearer chave-fake" -H "Content-Type: application/json"
+  sleep 0.5
+done
